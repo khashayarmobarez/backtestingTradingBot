@@ -1,6 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 
+# reading the codes
 # ===============================
 # 1. LOAD THE DATA
 # ===============================
