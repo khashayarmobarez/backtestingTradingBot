@@ -1,91 +1,131 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 
-
-# ===============================
-# 1. LOAD THE DATA
-# ===============================
-# Change the filename if your CSV has a different name
+# ========================================
+# 1️⃣ LOAD AND PREPARE DATA
+# ========================================
 data = pd.read_csv("gold_data.csv")
 
-# Let's print the first rows so we know what we’re working with
-print("Raw data sample:")
-print(data.head())
-
-# ===============================
-# 2. CLEAN & PREPARE THE DATA
-# ===============================
-
-# Your CSV has columns like: Date, Time, Open, High, Low, Close, Volume
-# But sometimes headers are messy, so let's rename them clearly:
+# Rename columns clearly (adapt to your CSV structure)
 data.columns = ["Date", "Time", "Open", "High", "Low", "Close", "Extra"]
 
-# Merge Date + Time into one datetime column
+# Combine Date + Time into one datetime column
 data["Datetime"] = pd.to_datetime(data["Date"] + " " + data["Time"])
 
-# Drop unused columns
+# Keep only relevant columns
 data = data[["Datetime", "Open", "High", "Low", "Close"]]
 
-# Make sure rows are sorted by time
+# Sort chronologically
 data = data.sort_values("Datetime").reset_index(drop=True)
 
-# ===============================
-# 3. DEFINE A SIMPLE STRATEGY
-# ===============================
-# We’ll use Moving Average Crossover:
-# - Short MA (fast) = 5 periods
-# - Long MA (slow) = 20 periods
-# When short > long → BUY signal
-# When short < long → SELL signal
+print(f"✅ Data loaded successfully! Total candles: {len(data)}")
+print("Sample data:\n", data.head(), "\n")
 
-data["SMA5"] = data["Close"].rolling(window=5).mean()
-data["SMA20"] = data["Close"].rolling(window=20).mean()
+# ========================================
+# 2️⃣ STRATEGY PARAMETERS
+# ========================================
+# You can tweak these to test performance later
+SHORT_MA = 5
+LONG_MA = 20
+INITIAL_BALANCE = 10000  # Starting balance in USD
+POSITION_SIZE = 1.0      # Buy 1 unit (e.g., 1 oz gold) per trade
 
-# ===============================
-# 4. CREATE TRADING SIGNALS
-# ===============================
-# Buy = 1, Sell = -1, Hold = 0
+# ========================================
+# 3️⃣ CALCULATE INDICATORS
+# ========================================
+data["SMA_Short"] = data["Close"].rolling(SHORT_MA).mean()
+data["SMA_Long"] = data["Close"].rolling(LONG_MA).mean()
+
+# Signal logic: if short > long → uptrend → buy
 data["Signal"] = 0
-data.loc[data["SMA5"] > data["SMA20"], "Signal"] = 1
-data.loc[data["SMA5"] < data["SMA20"], "Signal"] = -1
+data.loc[data["SMA_Short"] > data["SMA_Long"], "Signal"] = 1
+data.loc[data["SMA_Short"] < data["SMA_Long"], "Signal"] = -1
 
-# Shift signal to avoid "future knowledge" (you can only act on next candle)
-data["Position"] = data["Signal"].shift(1)
+# Shift signal so we enter at the *next candle*, not the same one
+data["Signal"] = data["Signal"].shift(1)
 
-# ===============================
-# 5. BACKTESTING
-# ===============================
-# Strategy return = % change of Close * position
-data["Return"] = data["Close"].pct_change()
-data["StrategyReturn"] = data["Return"] * data["Position"]
+# ========================================
+# 4️⃣ BACKTEST LOOP (REALISTIC SIMULATION)
+# ========================================
+balance = INITIAL_BALANCE   # how much money we have
+position = 0                # 0 = no trade, 1 = long, -1 = short
+entry_price = 0             # track price we entered at
+trade_log = []              # list of all trades
 
-# Calculate total performance
-cumulative_return = (1 + data["StrategyReturn"].fillna(0)).cumprod()
+# Loop through the data row by row
+for i in range(1, len(data)):
+    price = data.loc[i, "Close"]
+    signal = data.loc[i, "Signal"]
+    date = data.loc[i, "Datetime"]
 
-# ===============================
-# 6. PLOT RESULTS
-# ===============================
-plt.figure(figsize=(12,6))
-plt.plot(data["Datetime"], data["Close"], label="Gold Price", alpha=0.6)
-plt.plot(data["Datetime"], data["SMA5"], label="SMA 5", alpha=0.8)
-plt.plot(data["Datetime"], data["SMA20"], label="SMA 20", alpha=0.8)
+    # === BUY SIGNAL ===
+    if signal == 1 and position == 0:
+        position = 1
+        entry_price = price
+        trade_log.append({
+            "Type": "BUY",
+            "Date": date,
+            "Price": price,
+            "BalanceBefore": balance
+        })
+        print(f"🟢 BUY at {price:.2f} on {date}")
 
-# Mark buy & sell signals
-plt.scatter(data[data["Position"] == 1]["Datetime"], 
-            data[data["Position"] == 1]["Close"], 
-            label="Buy", marker="^", color="g", alpha=1)
+    # === SELL SIGNAL (if we were holding long) ===
+    elif signal == -1 and position == 1:
+        profit = (price - entry_price) * POSITION_SIZE
+        balance += profit
+        trade_log.append({
+            "Type": "SELL",
+            "Date": date,
+            "Price": price,
+            "Profit": profit,
+            "BalanceAfter": balance
+        })
+        print(f"🔴 SELL at {price:.2f} on {date} | Profit: {profit:.2f} | New Balance: {balance:.2f}")
+        position = 0
 
-plt.scatter(data[data["Position"] == -1]["Datetime"], 
-            data[data["Position"] == -1]["Close"], 
-            label="Sell", marker="v", color="r", alpha=1)
+# ========================================
+# 5️⃣ FINAL RESULTS
+# ========================================
+# If we still have a position open at the end, close it at last price
+if position == 1:
+    final_price = data["Close"].iloc[-1]
+    profit = (final_price - entry_price) * POSITION_SIZE
+    balance += profit
+    print(f"⚪ Closing final position at {final_price:.2f}, profit: {profit:.2f}")
+    position = 0
+
+# Print trade summary
+print("\n==============================")
+print("📊 FINAL TRADING REPORT")
+print("==============================")
+print(f"Total Trades: {len(trade_log)}")
+print(f"Final Balance: {balance:.2f} USD")
+print(f"Total Profit/Loss: {balance - INITIAL_BALANCE:.2f} USD")
+print("==============================\n")
+
+# Convert trade log to DataFrame for later analysis
+trades = pd.DataFrame(trade_log)
+
+# Save trade log to CSV
+trades.to_csv("trade_log.csv", index=False)
+print("💾 Trade log saved as trade_log")
+
+# ========================================
+# 6️⃣ PLOT CHART
+# ========================================
+plt.figure(figsize=(12, 6))
+plt.plot(data["Datetime"], data["Close"], label="Gold Price", color="gold", alpha=0.7)
+plt.plot(data["Datetime"], data["SMA_Short"], label=f"SMA {SHORT_MA}", color="blue", alpha=0.7)
+plt.plot(data["Datetime"], data["SMA_Long"], label=f"SMA {LONG_MA}", color="red", alpha=0.7)
+
+# Add buy/sell points
+plt.scatter(trades[trades["Type"] == "BUY"]["Date"], trades[trades["Type"] == "BUY"]["Price"], marker="^", color="green", label="BUY", s=80)
+plt.scatter(trades[trades["Type"] == "SELL"]["Date"], trades[trades["Type"] == "SELL"]["Price"], marker="v", color="red", label="SELL", s=80)
 
 plt.legend()
-plt.title("Gold Trading Strategy (SMA Crossover)")
+plt.title("Gold SMA Crossover Trading Backtest")
+plt.xlabel("Date")
+plt.ylabel("Price (USD)")
+plt.grid(True)
 plt.show()
-
-# ===============================
-# 7. FINAL PERFORMANCE REPORT
-# ===============================
-print("\nFinal Results:")
-print("Total Strategy Return: {:.2f}%".format((cumulative_return.iloc[-1] - 1) * 100))
-print("Buy & Hold Return: {:.2f}%".format((data["Close"].iloc[-1] / data["Close"].iloc[0] - 1) * 100))
