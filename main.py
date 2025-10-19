@@ -47,7 +47,10 @@ def backtest_candle_strategy(data, entry_offset=0.2, stop_offset=0.2):
         close_price = candle["close"]
         high_price = candle["high"]
         low_price = candle["low"]
-        date = candle["datetime"]
+        datetime_obj = candle["datetime"]
+        
+        # Extract day of week (Monday, Tuesday, etc.)
+        day_of_week = datetime_obj.strftime("%A")
 
         # Determine trade direction based on candle type
         if close_price > open_price:  # Bullish candle → Buy
@@ -129,7 +132,9 @@ def backtest_candle_strategy(data, entry_offset=0.2, stop_offset=0.2):
 
         # Record trade
         trades.append({
-            "date": date,
+            "date": datetime_obj.strftime("%Y-%m-%d"),
+            "time": datetime_obj.strftime("%H:%M:%S"),
+            "day_of_week": day_of_week,
             "type": trade_type,
             "entry": round(entry, 2),
             "stop_loss": round(stop_loss, 2),
@@ -179,23 +184,46 @@ if end_of_data_trades > 0:
     print(f"\nℹ️  {end_of_data_trades} positions were closed because the last candle was reached.")
     print("These positions never hit their stop loss during the available data.")
 
+# Analyze performance by day of week
+print("\n📅 --- PERFORMANCE BY DAY OF WEEK ---")
+day_stats = results.groupby("day_of_week").agg({
+    "reward_risk": lambda x: x[x != "SL"].mean() if len(x[x != "SL"]) > 0 else 0,
+    "max_profit": "mean",
+    "type": "count"
+}).round(2)
+day_stats.columns = ["Avg R/R", "Avg Profit", "Trade Count"]
+
+# Sort by day of week order
+day_order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+day_stats = day_stats.reindex([day for day in day_order if day in day_stats.index])
+print(day_stats)
+
 # Optional: visualize Reward/Risk distribution (numeric only)
 if len(numeric_rr) > 0:
-    plt.figure(figsize=(12, 5))
+    plt.figure(figsize=(15, 5))
     
     # Subplot 1: R/R Distribution
-    plt.subplot(1, 2, 1)
+    plt.subplot(1, 3, 1)
     plt.hist(numeric_rr, bins=30, color='gold', edgecolor='black')
     plt.title("Reward/Risk Distribution (R/R ≥ 1)")
     plt.xlabel("Reward/Risk Ratio")
     plt.ylabel("Frequency")
     
     # Subplot 2: Holding Period Distribution
-    plt.subplot(1, 2, 2)
+    plt.subplot(1, 3, 2)
     plt.hist(results["candles_held"], bins=30, color='skyblue', edgecolor='black')
     plt.title("Holding Period Distribution")
     plt.xlabel("Candles Held")
     plt.ylabel("Frequency")
+    
+    # Subplot 3: Trades by Day of Week
+    plt.subplot(1, 3, 3)
+    day_counts = results["day_of_week"].value_counts().reindex(day_order, fill_value=0)
+    plt.bar(range(len(day_counts)), day_counts.values, color='lightgreen', edgecolor='black')
+    plt.xticks(range(len(day_counts)), [day[:3] for day in day_counts.index], rotation=45)
+    plt.title("Trades by Day of Week")
+    plt.xlabel("Day")
+    plt.ylabel("Number of Trades")
     
     plt.tight_layout()
     plt.show()
