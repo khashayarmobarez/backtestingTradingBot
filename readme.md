@@ -15,7 +15,7 @@ strategy on how to open the deals based on the candles:
 the data that we need to record from the positions:
 1- if the position is buy or sell
 2- the distance value between the start of the position and the stop loss(call it distance value)
-3- reward / risk. reward in the highest amount of profit that we could get in that position during the time that position was open. for example in sell position if the biggest amount that chart went down was 10$ in the position then came back up and hitted the stop loss, and the distance value was 2$. risk / reward would equal to 5. also if the reward/risk
+3- reward / risk. reward in the highest amount of profit that we could get in that position during the time that position was open. for example in sell position if the biggest amount that chart went down was 10$ in the position then came back up and hitted the stop loss, and the distance value was 2$. risk / reward would equal to 5. also if the reward/risk is lower than 1 return SL(stop loss intead of the number)
 4- and the full date of when the position was opened.
 
 cleaned prompt:
