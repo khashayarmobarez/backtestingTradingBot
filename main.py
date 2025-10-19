@@ -6,27 +6,26 @@ import matplotlib.pyplot as plt
 #  STEP 1: LOAD AND PREPARE DATA
 # ===============================================================
 
-# File name of your historical data
-DATA_FILE = "gold_data.csv"
+# Load CSV file (no header, since your first row is actual data)
+data = pd.read_csv("gold_data.csv", header=None)
 
-# Read CSV (adjust if your file has no headers)
-data = pd.read_csv(DATA_FILE)
+data = data.head(100)  # limit to first 500 rows for faster testing
 
-# --- Data cleaning section ---
-# Your data likely has columns like:
-# Date, Time, Open, High, Low, Close, Volume
-# Let's handle cases where headers are missing or weird.
-if len(data.columns) <= 6:
-    data.columns = ["Date", "Time", "Open", "High", "Low", "Close", "Volume"]
+# Assign standard column names
+data.columns = ["date", "time", "open", "high", "low", "close", "volume"]
 
-# Combine date & time into single datetime
-data["datetime"] = pd.to_datetime(data["Date"] + " " + data["Time"])
-data = data[["datetime", "Open", "High", "Low", "Close"]]  # keep only needed
+# Combine date + time into single datetime column
+data["datetime"] = pd.to_datetime(data["date"] + " " + data["time"])
+
+# Keep only the needed columns for trading
+data = data[["datetime", "open", "high", "low", "close"]]
+
+# Sort by datetime (in case data is out of order)
 data.sort_values("datetime", inplace=True)
 data.reset_index(drop=True, inplace=True)
 
-print(f"✅ Data loaded successfully — {len(data)} candles available.")
-
+print(f"✅ Data loaded successfully — {len(data)} candles available.\n")
+print(data.head())  # optional: see structure
 
 # ===============================================================
 #  STEP 2: DEFINE THE BACKTESTING LOGIC
@@ -34,62 +33,59 @@ print(f"✅ Data loaded successfully — {len(data)} candles available.")
 
 def backtest_candle_strategy(data, entry_offset=0.2, stop_offset=0.2):
     """
-    Simulates the candle-based strategy on 4-hour candles.
-    Opens one trade per candle at close based on candle direction.
+    Backtests a candle-based trading strategy on 4-hour candles.
+    Opens one trade at the close of each candle and tracks performance until stop-loss is hit.
     """
-    trades = []  # list to store trade info
+    trades = []
 
-    for i in range(len(data) - 1):  # exclude last candle (no next candles to check)
-        current = data.iloc[i]
-        current_date = current["datetime"]
-        current_open = current["Open"]
-        current_high = current["High"]
-        current_low = current["Low"]
-        current_close = current["Close"]
+    for i in range(len(data) - 1):
+        candle = data.iloc[i]
 
-        # --- Determine trade type ---
-        if current_close > current_open:
+        open_price = candle["open"]
+        close_price = candle["close"]
+        high_price = candle["high"]
+        low_price = candle["low"]
+        date = candle["datetime"]
+
+        # Determine trade direction
+        if close_price > open_price:  # Bullish candle → Buy
             trade_type = "Buy"
-            entry = current_close + entry_offset
-            stop_loss = current_low - stop_offset
-        elif current_close < current_open:
+            entry = close_price + entry_offset
+            stop_loss = low_price - stop_offset
+        elif close_price < open_price:  # Bearish candle → Sell
             trade_type = "Sell"
-            entry = current_close - entry_offset
-            stop_loss = current_high + stop_offset
+            entry = close_price - entry_offset
+            stop_loss = high_price + stop_offset
         else:
-            # Skip if it's a doji candle (open == close)
+            # Skip doji (no direction)
             continue
 
-        # Distance between entry and stop-loss
         distance = abs(entry - stop_loss)
-
-        # --- Simulate forward candles until stop loss hit ---
         max_profit = 0
+
+        # Simulate forward candles to check when stop-loss is hit
         for j in range(i + 1, len(data)):
             future = data.iloc[j]
-            high = future["High"]
-            low = future["Low"]
+            high_future = future["high"]
+            low_future = future["low"]
 
             if trade_type == "Buy":
-                # Calculate max profit so far
-                max_profit = max(max_profit, high - entry)
-                # Check if stop loss hit
-                if low <= stop_loss:
+                # Track the highest price before stop-loss is hit
+                max_profit = max(max_profit, high_future - entry)
+                if low_future <= stop_loss:
                     break
 
             elif trade_type == "Sell":
-                # Calculate max profit so far (for sell it's entry - low)
-                max_profit = max(max_profit, entry - low)
-                # Check if stop loss hit
-                if high >= stop_loss:
+                # Track lowest price before stop-loss is hit
+                max_profit = max(max_profit, entry - low_future)
+                if high_future >= stop_loss:
                     break
 
-        # Reward/Risk ratio
         reward_risk = max_profit / distance if distance != 0 else np.nan
 
         # Record trade
         trades.append({
-            "date": current_date,
+            "date": date,
             "type": trade_type,
             "entry": round(entry, 2),
             "stop_loss": round(stop_loss, 2),
@@ -99,7 +95,6 @@ def backtest_candle_strategy(data, entry_offset=0.2, stop_offset=0.2):
         })
 
     return pd.DataFrame(trades)
-
 
 # ===============================================================
 #  STEP 3: RUN BACKTEST AND SAVE RESULTS
