@@ -1,131 +1,130 @@
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 
-# ========================================
-# 1️⃣ LOAD AND PREPARE DATA
-# ========================================
-data = pd.read_csv("gold_data.csv")
+# ===============================================================
+#  STEP 1: LOAD AND PREPARE DATA
+# ===============================================================
 
-# Rename columns clearly (adapt to your CSV structure)
-data.columns = ["Date", "Time", "Open", "High", "Low", "Close", "Extra"]
+# File name of your historical data
+DATA_FILE = "gold_data.csv"
 
-# Combine Date + Time into one datetime column
-data["Datetime"] = pd.to_datetime(data["Date"] + " " + data["Time"])
+# Read CSV (adjust if your file has no headers)
+data = pd.read_csv(DATA_FILE)
 
-# Keep only relevant columns
-data = data[["Datetime", "Open", "High", "Low", "Close"]]
+# --- Data cleaning section ---
+# Your data likely has columns like:
+# Date, Time, Open, High, Low, Close, Volume
+# Let's handle cases where headers are missing or weird.
+if len(data.columns) <= 6:
+    data.columns = ["Date", "Time", "Open", "High", "Low", "Close", "Volume"]
 
-# Sort chronologically
-data = data.sort_values("Datetime").reset_index(drop=True)
+# Combine date & time into single datetime
+data["datetime"] = pd.to_datetime(data["Date"] + " " + data["Time"])
+data = data[["datetime", "Open", "High", "Low", "Close"]]  # keep only needed
+data.sort_values("datetime", inplace=True)
+data.reset_index(drop=True, inplace=True)
 
-print(f"✅ Data loaded successfully! Total candles: {len(data)}")
-print("Sample data:\n", data.head(), "\n")
+print(f"✅ Data loaded successfully — {len(data)} candles available.")
 
-# ========================================
-# 2️⃣ STRATEGY PARAMETERS
-# ========================================
-# You can tweak these to test performance later
-SHORT_MA = 5
-LONG_MA = 20
-INITIAL_BALANCE = 10000  # Starting balance in USD
-POSITION_SIZE = 1.0      # Buy 1 unit (e.g., 1 oz gold) per trade
 
-# ========================================
-# 3️⃣ CALCULATE INDICATORS
-# ========================================
-data["SMA_Short"] = data["Close"].rolling(SHORT_MA).mean()
-data["SMA_Long"] = data["Close"].rolling(LONG_MA).mean()
+# ===============================================================
+#  STEP 2: DEFINE THE BACKTESTING LOGIC
+# ===============================================================
 
-# Signal logic: if short > long → uptrend → buy
-data["Signal"] = 0
-data.loc[data["SMA_Short"] > data["SMA_Long"], "Signal"] = 1
-data.loc[data["SMA_Short"] < data["SMA_Long"], "Signal"] = -1
+def backtest_candle_strategy(data, entry_offset=0.2, stop_offset=0.2):
+    """
+    Simulates the candle-based strategy on 4-hour candles.
+    Opens one trade per candle at close based on candle direction.
+    """
+    trades = []  # list to store trade info
 
-# Shift signal so we enter at the *next candle*, not the same one
-data["Signal"] = data["Signal"].shift(1)
+    for i in range(len(data) - 1):  # exclude last candle (no next candles to check)
+        current = data.iloc[i]
+        current_date = current["datetime"]
+        current_open = current["Open"]
+        current_high = current["High"]
+        current_low = current["Low"]
+        current_close = current["Close"]
 
-# ========================================
-# 4️⃣ BACKTEST LOOP (REALISTIC SIMULATION)
-# ========================================
-balance = INITIAL_BALANCE   # how much money we have
-position = 0                # 0 = no trade, 1 = long, -1 = short
-entry_price = 0             # track price we entered at
-trade_log = []              # list of all trades
+        # --- Determine trade type ---
+        if current_close > current_open:
+            trade_type = "Buy"
+            entry = current_close + entry_offset
+            stop_loss = current_low - stop_offset
+        elif current_close < current_open:
+            trade_type = "Sell"
+            entry = current_close - entry_offset
+            stop_loss = current_high + stop_offset
+        else:
+            # Skip if it's a doji candle (open == close)
+            continue
 
-# Loop through the data row by row
-for i in range(1, len(data)):
-    price = data.loc[i, "Close"]
-    signal = data.loc[i, "Signal"]
-    date = data.loc[i, "Datetime"]
+        # Distance between entry and stop-loss
+        distance = abs(entry - stop_loss)
 
-    # === BUY SIGNAL ===
-    if signal == 1 and position == 0:
-        position = 1
-        entry_price = price
-        trade_log.append({
-            "Type": "BUY",
-            "Date": date,
-            "Price": price,
-            "BalanceBefore": balance
+        # --- Simulate forward candles until stop loss hit ---
+        max_profit = 0
+        for j in range(i + 1, len(data)):
+            future = data.iloc[j]
+            high = future["High"]
+            low = future["Low"]
+
+            if trade_type == "Buy":
+                # Calculate max profit so far
+                max_profit = max(max_profit, high - entry)
+                # Check if stop loss hit
+                if low <= stop_loss:
+                    break
+
+            elif trade_type == "Sell":
+                # Calculate max profit so far (for sell it's entry - low)
+                max_profit = max(max_profit, entry - low)
+                # Check if stop loss hit
+                if high >= stop_loss:
+                    break
+
+        # Reward/Risk ratio
+        reward_risk = max_profit / distance if distance != 0 else np.nan
+
+        # Record trade
+        trades.append({
+            "date": current_date,
+            "type": trade_type,
+            "entry": round(entry, 2),
+            "stop_loss": round(stop_loss, 2),
+            "distance": round(distance, 2),
+            "max_profit": round(max_profit, 2),
+            "reward_risk": round(reward_risk, 2)
         })
-        print(f"🟢 BUY at {price:.2f} on {date}")
 
-    # === SELL SIGNAL (if we were holding long) ===
-    elif signal == -1 and position == 1:
-        profit = (price - entry_price) * POSITION_SIZE
-        balance += profit
-        trade_log.append({
-            "Type": "SELL",
-            "Date": date,
-            "Price": price,
-            "Profit": profit,
-            "BalanceAfter": balance
-        })
-        print(f"🔴 SELL at {price:.2f} on {date} | Profit: {profit:.2f} | New Balance: {balance:.2f}")
-        position = 0
+    return pd.DataFrame(trades)
 
-# ========================================
-# 5️⃣ FINAL RESULTS
-# ========================================
-# If we still have a position open at the end, close it at last price
-if position == 1:
-    final_price = data["Close"].iloc[-1]
-    profit = (final_price - entry_price) * POSITION_SIZE
-    balance += profit
-    print(f"⚪ Closing final position at {final_price:.2f}, profit: {profit:.2f}")
-    position = 0
 
-# Print trade summary
-print("\n==============================")
-print("📊 FINAL TRADING REPORT")
-print("==============================")
-print(f"Total Trades: {len(trade_log)}")
-print(f"Final Balance: {balance:.2f} USD")
-print(f"Total Profit/Loss: {balance - INITIAL_BALANCE:.2f} USD")
-print("==============================\n")
+# ===============================================================
+#  STEP 3: RUN BACKTEST AND SAVE RESULTS
+# ===============================================================
 
-# Convert trade log to DataFrame for later analysis
-trades = pd.DataFrame(trade_log)
+results = backtest_candle_strategy(data)
+results.to_csv("trades.csv", index=False)
+print("💾 Results saved to trades.csv")
 
-# Save trade log to CSV
-trades.to_csv("trade_log.csv", index=False)
-print("💾 Trade log saved as trade_log")
+# ===============================================================
+#  STEP 4: SUMMARY STATISTICS
+# ===============================================================
 
-# ========================================
-# 6️⃣ PLOT CHART
-# ========================================
-plt.figure(figsize=(12, 6))
-plt.plot(data["Datetime"], data["Close"], label="Gold Price", color="gold", alpha=0.7)
-plt.plot(data["Datetime"], data["SMA_Short"], label=f"SMA {SHORT_MA}", color="blue", alpha=0.7)
-plt.plot(data["Datetime"], data["SMA_Long"], label=f"SMA {LONG_MA}", color="red", alpha=0.7)
+total_trades = len(results)
+avg_rr = results["reward_risk"].mean()
+avg_profit = results["max_profit"].mean()
 
-# Add buy/sell points
-plt.scatter(trades[trades["Type"] == "BUY"]["Date"], trades[trades["Type"] == "BUY"]["Price"], marker="^", color="green", label="BUY", s=80)
-plt.scatter(trades[trades["Type"] == "SELL"]["Date"], trades[trades["Type"] == "SELL"]["Price"], marker="v", color="red", label="SELL", s=80)
+print("\n📊 --- BACKTEST SUMMARY ---")
+print(f"Total Trades: {total_trades}")
+print(f"Average Reward/Risk: {avg_rr:.2f}")
+print(f"Average Max Profit: {avg_profit:.2f} USD")
 
-plt.legend()
-plt.title("Gold SMA Crossover Trading Backtest")
-plt.xlabel("Date")
-plt.ylabel("Price (USD)")
-plt.grid(True)
+# Optional: visualize Reward/Risk distribution
+plt.hist(results["reward_risk"], bins=30, color='gold', edgecolor='black')
+plt.title("Reward/Risk Distribution")
+plt.xlabel("Reward/Risk Ratio")
+plt.ylabel("Frequency")
 plt.show()
