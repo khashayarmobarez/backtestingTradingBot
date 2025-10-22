@@ -1,0 +1,2 @@
+date,time,day_of_week,type,entry,stop_loss,distance,max_profit,reward_risk,candles_held,close_reason,distance_rounded
+2009-03-18,21:30:00,Wednesday,Buy,942.2,891.93,50.27,24.97,SL,72,Stop Loss,50

@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 # Load CSV file (no header, since your first row is actual data)
 data = pd.read_csv("gold_data.csv", header=None)
 
-data = data.head(500)  # limit to first 500 rows for faster testing
+# data = data.head(1000)  # limit to first 500 rows for faster testing
 
 # Assign standard column names
 data.columns = ["date", "time", "open", "high", "low", "close", "volume"]

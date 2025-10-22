@@ -1,0 +1,17 @@
+date,time,day_of_week,type,entry,stop_loss,distance,max_profit,reward_risk,candles_held,close_reason,distance_rounded
+2025-04-17,13:30:00,Thursday,Sell,3314.82,3342.27,27.45,31.08,1.13,3,Stop Loss,27
+2009-12-09,18:30:00,Wednesday,Sell,1119.84,1147.15,27.31,45.19,1.65,120,Stop Loss,27
+2025-08-11,01:30:00,Monday,Sell,3377.31,3405.06,27.75,65.79,2.37,81,Stop Loss,27
+2020-11-23,14:30:00,Monday,Sell,1841.36,1869.14,27.78,77.14,2.78,61,Stop Loss,27
+2011-05-02,02:30:00,Monday,Sell,1548.45,1576.25,27.8,86.4,3.11,315,Stop Loss,27
+2024-12-12,14:30:00,Thursday,Sell,2686.2,2713.63,27.43,103.98,3.79,135,Stop Loss,27
+2025-06-18,21:30:00,Wednesday,Sell,3368.74,3395.95,27.21,121.9,4.48,137,Stop Loss,27
+2016-11-09,14:30:00,Wednesday,Sell,1280.4,1307.57,27.17,157.89,5.81,1226,Stop Loss,27
+2024-10-31,13:30:00,Thursday,Sell,2755.06,2782.71,27.65,218.37,7.9,351,Stop Loss,27
+2019-07-05,14:30:00,Friday,Sell,1389.18,1416.3,27.12,3.61,SL,20,Stop Loss,27
+2020-03-17,01:30:00,Tuesday,Sell,1492.1,1519.39,27.29,26.7,SL,4,Stop Loss,27
+2021-09-16,14:30:00,Thursday,Sell,1752.76,1780.5,27.74,10.69,SL,19,Stop Loss,27
+2023-04-19,09:30:00,Wednesday,Sell,1973.85,2001.43,27.58,4.73,SL,7,Stop Loss,27
+2025-05-07,09:30:00,Wednesday,Sell,3369.74,3397.49,27.75,0.55,SL,1,Stop Loss,27
+2025-06-24,13:30:00,Tuesday,Sell,3301.49,3328.99,27.5,2.34,SL,3,Stop Loss,27
+2025-09-25,13:30:00,Thursday,Sell,3733.16,3761.03,27.87,9.63,SL,6,Stop Loss,27

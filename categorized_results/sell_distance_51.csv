@@ -1,0 +1,6 @@
+date,time,day_of_week,type,entry,stop_loss,distance,max_profit,reward_risk,candles_held,close_reason,distance_rounded
+2013-06-20,10:30:00,Thursday,Sell,1294.11,1345.25,51.14,113.96,2.23,141,Stop Loss,51
+2021-06-16,22:30:00,Wednesday,Sell,1810.23,1861.91,51.68,123.04,2.38,626,Stop Loss,51
+2013-05-22,18:30:00,Wednesday,Sell,1363.55,1414.68,51.13,9.16,SL,35,Stop Loss,51
+2024-12-18,22:30:00,Wednesday,Sell,2585.06,2636.51,51.45,2.84,SL,27,Stop Loss,51
+2025-05-01,01:30:00,Thursday,Sell,3238.3,3290.26,51.96,36.43,SL,14,Stop Loss,51
