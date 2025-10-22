@@ -1,4 +1,4 @@
 date,time,day_of_week,type,entry,stop_loss,distance,max_profit,reward_risk,candles_held,close_reason,distance_rounded
-2011-08-24,14:30:00,Wednesday,Sell,1806.98,1850.2,43.22,104.08,2.41,41,Stop Loss,43
-2011-09-23,13:30:00,Friday,Sell,1688.45,1732.19,43.74,156.0,3.57,145,Stop Loss,43
-2020-02-28,18:30:00,Friday,Sell,1573.88,1617.07,43.19,9.11,SL,12,Stop Loss,43
+2011-08-24,14:30:00,Wednesday,Sell,1806.98,1850.2,43.2,104.08,2.41,41,Stop Loss,43
+2011-09-23,13:30:00,Friday,Sell,1688.45,1732.19,43.7,156.0,3.57,145,Stop Loss,43
+2020-02-28,18:30:00,Friday,Sell,1573.88,1617.07,43.2,9.11,SL,12,Stop Loss,43

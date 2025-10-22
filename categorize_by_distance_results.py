@@ -6,7 +6,7 @@ import math
 #  CATEGORIZE AND SPLIT TRADING RESULTS
 # ===============================================================
 
-def categorize_trades(input_csv="trades.csv", output_folder="categorized_results"):
+def categorize_trades(input_csv="trades.csv", output_folder="categorized_by_distance_results"):
     """
     Categorizes trades from the backtest results:
     1. Separates Buy vs Sell positions
@@ -29,6 +29,9 @@ def categorize_trades(input_csv="trades.csv", output_folder="categorized_results
         print(f"❌ Error: {input_csv} not found!")
         print("Please run main.py first to generate the trades.csv file.")
         return
+    
+    # Round distance to 1 decimal place
+    trades["distance"] = trades["distance"].apply(lambda x: round(x, 1))
     
     # Add a column for rounded-down distance
     trades["distance_rounded"] = trades["distance"].apply(lambda x: math.floor(x))

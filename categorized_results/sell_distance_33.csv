@@ -1,11 +1,11 @@
 date,time,day_of_week,type,entry,stop_loss,distance,max_profit,reward_risk,candles_held,close_reason,distance_rounded
-2013-04-12,18:30:00,Friday,Sell,1503.2,1537.01,33.81,456.97,13.52,9817,Stop Loss,33
+2013-04-12,18:30:00,Friday,Sell,1503.2,1537.01,33.8,456.97,13.52,9817,Stop Loss,33
 2011-09-21,22:30:00,Wednesday,Sell,1781.7,1815.6,33.9,735.47,21.7,13554,Stop Loss,33
-2024-04-19,05:30:00,Friday,Sell,2381.07,2415.0,33.93,103.99,3.06,123,Stop Loss,33
-2011-08-29,14:30:00,Monday,Sell,1788.78,1822.65,33.87,13.13,SL,6,Stop Loss,33
-2013-06-27,18:30:00,Thursday,Sell,1201.94,1235.06,33.12,21.79,SL,8,Stop Loss,33
-2024-08-05,13:30:00,Monday,Sell,2392.35,2425.73,33.38,13.41,SL,20,Stop Loss,33
+2024-04-19,05:30:00,Friday,Sell,2381.07,2415.0,33.9,103.99,3.06,123,Stop Loss,33
+2011-08-29,14:30:00,Monday,Sell,1788.78,1822.65,33.9,13.13,SL,6,Stop Loss,33
+2013-06-27,18:30:00,Thursday,Sell,1201.94,1235.06,33.1,21.79,SL,8,Stop Loss,33
+2024-08-05,13:30:00,Monday,Sell,2392.35,2425.73,33.4,13.41,SL,20,Stop Loss,33
 2025-04-08,17:30:00,Tuesday,Sell,2984.88,3018.38,33.5,15.06,SL,3,Stop Loss,33
-2025-05-02,17:30:00,Friday,Sell,3231.05,3264.69,33.64,6.68,SL,2,Stop Loss,33
-2025-05-07,21:30:00,Wednesday,Sell,3364.53,3397.99,33.46,0.0,SL,1,Stop Loss,33
-2025-05-09,01:30:00,Friday,Sell,3290.95,3324.1,33.15,16.4,SL,1,Stop Loss,33
+2025-05-02,17:30:00,Friday,Sell,3231.05,3264.69,33.6,6.68,SL,2,Stop Loss,33
+2025-05-07,21:30:00,Wednesday,Sell,3364.53,3397.99,33.5,0.0,SL,1,Stop Loss,33
+2025-05-09,01:30:00,Friday,Sell,3290.95,3324.1,33.1,16.4,SL,1,Stop Loss,33

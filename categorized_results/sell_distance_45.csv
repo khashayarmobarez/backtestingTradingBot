@@ -1,2 +1,2 @@
 date,time,day_of_week,type,entry,stop_loss,distance,max_profit,reward_risk,candles_held,close_reason,distance_rounded
-2024-11-11,14:30:00,Monday,Sell,2622.15,2667.16,45.01,85.46,1.9,47,Stop Loss,45
+2024-11-11,14:30:00,Monday,Sell,2622.15,2667.16,45.0,85.46,1.9,47,Stop Loss,45

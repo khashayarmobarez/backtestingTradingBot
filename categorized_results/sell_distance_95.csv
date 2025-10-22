@@ -1,2 +1,2 @@
 date,time,day_of_week,type,entry,stop_loss,distance,max_profit,reward_risk,candles_held,close_reason,distance_rounded
-2020-11-09,14:30:00,Monday,Sell,1863.02,1958.88,95.86,98.8,1.03,236,Stop Loss,95
+2020-11-09,14:30:00,Monday,Sell,1863.02,1958.88,95.9,98.8,1.03,236,Stop Loss,95

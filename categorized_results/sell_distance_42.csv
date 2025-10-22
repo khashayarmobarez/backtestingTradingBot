@@ -1,3 +1,3 @@
 date,time,day_of_week,type,entry,stop_loss,distance,max_profit,reward_risk,candles_held,close_reason,distance_rounded
-2011-09-28,17:30:00,Wednesday,Sell,1608.1,1650.25,42.15,25.61,SL,16,Stop Loss,42
-2011-10-04,17:30:00,Tuesday,Sell,1606.91,1649.65,42.74,11.46,SL,9,Stop Loss,42
+2011-09-28,17:30:00,Wednesday,Sell,1608.1,1650.25,42.1,25.61,SL,16,Stop Loss,42
+2011-10-04,17:30:00,Tuesday,Sell,1606.91,1649.65,42.7,11.46,SL,9,Stop Loss,42

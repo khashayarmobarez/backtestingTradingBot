@@ -1,2 +1,2 @@
 date,time,day_of_week,type,entry,stop_loss,distance,max_profit,reward_risk,candles_held,close_reason,distance_rounded
-2012-02-29,18:30:00,Wednesday,Sell,1711.9,1785.75,73.85,185.06,2.51,878,Stop Loss,73
+2012-02-29,18:30:00,Wednesday,Sell,1711.9,1785.75,73.8,185.06,2.51,878,Stop Loss,73

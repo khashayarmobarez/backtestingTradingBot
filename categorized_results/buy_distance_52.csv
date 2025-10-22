@@ -1,5 +1,5 @@
 date,time,day_of_week,type,entry,stop_loss,distance,max_profit,reward_risk,candles_held,close_reason,distance_rounded
-2020-08-12,10:30:00,Wednesday,Buy,1932.18,1880.01,52.17,83.42,1.6,179,Stop Loss,52
-2025-05-05,09:30:00,Monday,Buy,3308.89,3256.42,52.47,126.16,2.4,30,Stop Loss,52
-2012-09-13,18:30:00,Thursday,Buy,1767.8,1715.02,52.78,28.0,SL,158,Stop Loss,52
-2025-04-22,05:30:00,Tuesday,Buy,3494.49,3442.01,52.48,5.62,SL,2,Stop Loss,52
+2020-08-12,10:30:00,Wednesday,Buy,1932.18,1880.01,52.2,83.42,1.6,179,Stop Loss,52
+2025-05-05,09:30:00,Monday,Buy,3308.89,3256.42,52.5,126.16,2.4,30,Stop Loss,52
+2012-09-13,18:30:00,Thursday,Buy,1767.8,1715.02,52.8,28.0,SL,158,Stop Loss,52
+2025-04-22,05:30:00,Tuesday,Buy,3494.49,3442.01,52.5,5.62,SL,2,Stop Loss,52

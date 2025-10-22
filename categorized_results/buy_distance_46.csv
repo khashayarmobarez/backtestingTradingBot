@@ -1,3 +1,3 @@
 date,time,day_of_week,type,entry,stop_loss,distance,max_profit,reward_risk,candles_held,close_reason,distance_rounded
-2025-04-10,17:30:00,Thursday,Buy,3162.92,3116.54,46.38,668.39,14.41,725,End of Data,46
-2023-12-13,22:30:00,Wednesday,Buy,2027.6,1981.54,46.06,1803.71,39.16,2765,End of Data,46
+2025-04-10,17:30:00,Thursday,Buy,3162.92,3116.54,46.4,668.39,14.41,725,End of Data,46
+2023-12-13,22:30:00,Wednesday,Buy,2027.6,1981.54,46.1,1803.71,39.16,2765,End of Data,46

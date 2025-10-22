@@ -1,2 +1,2 @@
 date,time,day_of_week,type,entry,stop_loss,distance,max_profit,reward_risk,candles_held,close_reason,distance_rounded
-2013-04-15,10:30:00,Monday,Sell,1394.03,1459.34,65.31,72.44,1.11,50,Stop Loss,65
+2013-04-15,10:30:00,Monday,Sell,1394.03,1459.34,65.3,72.44,1.11,50,Stop Loss,65

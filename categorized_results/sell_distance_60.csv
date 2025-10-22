@@ -1,2 +1,2 @@
 date,time,day_of_week,type,entry,stop_loss,distance,max_profit,reward_risk,candles_held,close_reason,distance_rounded
-2011-09-26,05:30:00,Monday,Sell,1574.74,1646.35,71.6,42.29,SL,6,Stop Loss,71
+2020-03-13,17:30:00,Friday,Sell,1522.04,1582.03,60.0,70.96,1.18,39,Stop Loss,60
