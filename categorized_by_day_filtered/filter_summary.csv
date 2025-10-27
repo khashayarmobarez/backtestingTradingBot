@@ -1,0 +1,11 @@
+Status,Filename
+Passed,buy_friday.csv
+Passed,buy_monday.csv
+Passed,buy_thursday.csv
+Passed,buy_tuesday.csv
+Passed,buy_wednesday.csv
+Passed,sell_friday.csv
+Passed,sell_monday.csv
+Passed,sell_thursday.csv
+Passed,sell_tuesday.csv
+Passed,sell_wednesday.csv

@@ -1,0 +1,11 @@
+date,time,day_of_week,type,entry,stop_loss,distance,max_profit,reward_risk,candles_held,close_reason,distance_rounded
+2022-03-16,21:30:00,Wednesday,Buy,1927.27,1894.69,32.6,38.75,1.19,52,Stop Loss,32
+2022-03-08,06:30:00,Tuesday,Buy,2016.98,1984.36,32.6,53.37,1.64,8,Stop Loss,32
+2013-10-17,09:30:00,Thursday,Buy,1306.86,1274.17,32.7,54.84,1.68,110,Stop Loss,32
+2025-02-03,14:30:00,Monday,Buy,2829.71,2797.53,32.2,1001.6,31.12,1014,End of Data,32
+2024-09-12,13:30:00,Thursday,Buy,2545.46,2512.73,32.7,1285.85,39.29,1611,End of Data,32
+2024-08-16,13:30:00,Friday,Buy,2494.76,2462.57,32.2,1336.55,41.52,1725,End of Data,32
+2012-05-30,18:30:00,Wednesday,Buy,1569.45,1536.6,32.9,226.35,6.89,1337,Stop Loss,32
+2011-08-11,22:30:00,Thursday,Buy,1764.05,1731.6,32.5,4.1,SL,5,Stop Loss,32
+2016-03-16,21:30:00,Wednesday,Buy,1262.42,1229.54,32.9,8.4,SL,28,Stop Loss,32
+2020-04-13,18:30:00,Monday,Buy,1717.99,1685.93,32.1,29.05,SL,22,Stop Loss,32

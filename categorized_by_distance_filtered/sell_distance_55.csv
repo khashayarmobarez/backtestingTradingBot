@@ -1,0 +1,3 @@
+date,time,day_of_week,type,entry,stop_loss,distance,max_profit,reward_risk,candles_held,close_reason,distance_rounded
+2025-05-08,17:30:00,Thursday,Sell,3308.03,3363.03,55.0,187.17,3.4,65,Stop Loss,55
+2011-08-24,18:30:00,Wednesday,Sell,1752.65,1807.77,55.1,49.75,SL,13,Stop Loss,55

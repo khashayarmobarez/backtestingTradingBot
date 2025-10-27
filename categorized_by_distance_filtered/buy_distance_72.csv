@@ -1,0 +1,2 @@
+date,time,day_of_week,type,entry,stop_loss,distance,max_profit,reward_risk,candles_held,close_reason,distance_rounded
+2011-09-26,09:30:00,Monday,Buy,1604.73,1532.25,72.5,198.07,2.73,400,Stop Loss,72
