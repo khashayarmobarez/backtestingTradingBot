@@ -33,6 +33,9 @@ def calculate_profitability_formula(input_csv="trades.csv", output_csv="formula_
     tp_mask = trades["reward_risk"] != "SL"
     tps = trades[tp_mask]["reward_risk"].apply(lambda x: float(x)).tolist()
     
+    # Sort TPs from smallest to largest (IMPORTANT!)
+    tps.sort()
+    
     # Count total SL trades
     initial_sl_count = len(trades[trades["reward_risk"] == "SL"])
     
@@ -131,6 +134,9 @@ def create_detailed_report(input_csv="trades.csv", output_txt="formula_report.tx
     # Extract TPs and SLs
     tp_mask = trades["reward_risk"] != "SL"
     tps = trades[tp_mask]["reward_risk"].apply(lambda x: float(x)).tolist()
+    
+    # Sort TPs from smallest to largest (IMPORTANT!)
+    tps.sort()
     initial_sl_count = len(trades[trades["reward_risk"] == "SL"])
     
     # Create report
