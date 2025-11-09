@@ -63,15 +63,19 @@ def calculate_lowest_drawdown(input_csv="trades.csv", output_csv="lowest_drawdow
     results = []
     
     # Test each reward level
-    for reward_level in reward_levels:
-        print(f"\n📍 Reward Level {reward_level}:")
+    for reward_idx, reward_level in enumerate(reward_levels, 1):
+        print(f"\n📍 Reward Level {reward_level} ({reward_idx}/{len(reward_levels)}):")
         print(f"   Rules: R/R ≥ {reward_level} = +{reward_level}, R/R < {reward_level} = -1")
         
         absolute_lowest = float('inf')  # Start with infinity
         best_starting_position = None
         
+        # Calculate progress reporting interval (every 10% or every 100 SLs, whichever is smaller)
+        total_sl_positions = len(sl_positions)
+        report_interval = min(max(total_sl_positions // 10, 1), 100)
+        
         # Test starting from each SL position
-        for start_idx in sl_positions:
+        for idx, start_idx in enumerate(sl_positions, 1):
             running_total = 0
             lowest_in_this_run = 0
             
@@ -92,6 +96,11 @@ def calculate_lowest_drawdown(input_csv="trades.csv", output_csv="lowest_drawdow
             if lowest_in_this_run < absolute_lowest:
                 absolute_lowest = lowest_in_this_run
                 best_starting_position = start_idx
+            
+            # Log progress periodically
+            if idx % report_interval == 0 or idx == total_sl_positions:
+                progress_pct = (idx / total_sl_positions) * 100
+                print(f"   ⏳ Progress: {idx}/{total_sl_positions} SL positions tested ({progress_pct:.1f}%) - Current lowest: {absolute_lowest}")
         
         print(f"   ✅ Absolute Lowest: {absolute_lowest}")
         print(f"   📌 Best Starting Position: Index {best_starting_position}")
@@ -169,11 +178,16 @@ def create_detailed_report(input_csv="trades.csv", output_txt="drawdown_report.t
     report_lines.append("")
     
     # Calculate for each reward level
-    for reward_level in reward_levels:
+    for reward_idx, reward_level in enumerate(reward_levels, 1):
+        print(f"   📍 Processing Reward Level {reward_level} ({reward_idx}/{len(reward_levels)})...")
+        
         absolute_lowest = float('inf')
         best_starting_position = None
         
-        for start_idx in sl_positions:
+        total_sl_positions = len(sl_positions)
+        report_interval = min(max(total_sl_positions // 10, 1), 100)
+        
+        for idx, start_idx in enumerate(sl_positions, 1):
             running_total = 0
             lowest_in_this_run = 0
             
@@ -191,6 +205,11 @@ def create_detailed_report(input_csv="trades.csv", output_txt="drawdown_report.t
             if lowest_in_this_run < absolute_lowest:
                 absolute_lowest = lowest_in_this_run
                 best_starting_position = start_idx
+            
+            # Log progress for report generation
+            if idx % report_interval == 0:
+                progress_pct = (idx / total_sl_positions) * 100
+                print(f"      Progress: {progress_pct:.0f}% complete...")
         
         report_lines.append(f"Reward Level {reward_level}:")
         report_lines.append(f"  Rule: R/R ≥ {reward_level} = +{reward_level}, R/R < {reward_level} = -1")
