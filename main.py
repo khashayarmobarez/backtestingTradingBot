@@ -226,7 +226,8 @@ if len(numeric_rr) > 0:
     plt.ylabel("Number of Trades")
     
     plt.tight_layout()
-    plt.show()
+    plt.savefig('reward_risk_distribution.png')
+    print("📊 Chart saved to: reward_risk_distribution.png")
 
 # Optional: Show close reason breakdown
 print("\n📋 --- CLOSE REASON BREAKDOWN ---")
