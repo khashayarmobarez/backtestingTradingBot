@@ -9,13 +9,15 @@ def calculate_lowest_drawdown(input_csv="trades.csv", output_csv="lowest_drawdow
     """
     Calculates the lowest possible cumulative value for each reward level.
     
+    Algorithm:
+    1. First pass: Go through entire list from top to bottom, track when balance = 0
+    2. Second pass: Start from each zero-crossing position and calculate drawdown
+    3. Return the absolute lowest across all passes (including initial pass)
+    
     For each reward level (1, 2, 3, etc.):
-    - Starts from each SL position in the list
     - Counts trades >= reward as +reward_value
     - Counts trades < reward as -1
     - Tracks the lowest cumulative value reached
-    
-    Returns the absolute lowest value for each reward level.
     """
     
     # Load the trades CSV
@@ -40,16 +42,7 @@ def calculate_lowest_drawdown(input_csv="trades.csv", output_csv="lowest_drawdow
     
     print(f"📊 Total Trades: {len(trades)}")
     print(f"📉 Total SLs: {len(trades[trades['reward_risk'] == 'SL'])}")
-    print(f"📈 Max Reward/Risk: {trades['rr_numeric'].max():.2f}")
-    
-    # Find all SL positions
-    sl_positions = trades[trades["reward_risk"] == "SL"].index.tolist()
-    
-    if len(sl_positions) == 0:
-        print("\n❌ No SL trades found in the list!")
-        return
-    
-    print(f"🎯 Found {len(sl_positions)} SL positions to test from\n")
+    print(f"📈 Max Reward/Risk: {trades['rr_numeric'].max():.2f}\n")
     
     # Determine reward levels to test (integers from 1 to max)
     max_reward = int(trades["rr_numeric"].max())
@@ -67,48 +60,86 @@ def calculate_lowest_drawdown(input_csv="trades.csv", output_csv="lowest_drawdow
         print(f"\n📍 Reward Level {reward_level} ({reward_idx}/{len(reward_levels)}):")
         print(f"   Rules: R/R ≥ {reward_level} = +{reward_level}, R/R < {reward_level} = -1")
         
-        absolute_lowest = float('inf')  # Start with infinity
-        best_starting_position = None
+        # PHASE 1: Initial pass through entire list
+        print(f"   🔄 Phase 1: Initial pass through all trades...")
         
-        # Calculate progress reporting interval (every 10% or every 100 SLs, whichever is smaller)
-        total_sl_positions = len(sl_positions)
-        report_interval = min(max(total_sl_positions // 10, 1), 100)
+        running_total = 0
+        lowest_overall = 0
+        zero_crossing_positions = []  # Positions where balance reaches exactly 0
         
-        # Test starting from each SL position
-        for idx, start_idx in enumerate(sl_positions, 1):
-            running_total = 0
-            lowest_in_this_run = 0
+        for i in range(len(trades)):
+            rr_value = trades.iloc[i]["rr_numeric"]
             
-            # Go through all trades from this starting position
-            for i in range(start_idx, len(trades)):
-                rr_value = trades.iloc[i]["rr_numeric"]
+            if rr_value >= reward_level:
+                running_total += reward_level
+            else:
+                running_total -= 1
+            
+            # Track the lowest point
+            if running_total < lowest_overall:
+                lowest_overall = running_total
+            
+            # Mark positions where balance reaches exactly 0
+            if running_total == 0:
+                for j in range(i + 1, len(trades)):
+                    if trades.iloc[j]["reward_risk"] == "SL":
+                        next_sl_idx = j
+                        break
+                if next_sl_idx is not None:
+                    zero_crossing_positions.append(next_sl_idx)
+        
+        print(f"   ✅ Initial pass complete - Lowest: {lowest_overall}")
+        print(f"   📌 Found {len(zero_crossing_positions)} zero-crossing positions")
+        
+        best_starting_position = 0  # Default to start
+        
+        # PHASE 2: Test from each zero-crossing position
+        if len(zero_crossing_positions) > 0:
+            print(f"   🔄 Phase 2: Testing from zero-crossing positions...")
+            
+            # Calculate progress reporting interval
+            total_positions = len(zero_crossing_positions)
+            report_interval = min(max(total_positions // 10, 1), 100)
+            
+            for idx, start_idx in enumerate(zero_crossing_positions, 1):
+                running_total = 0
+                lowest_in_this_run = 0
                 
-                if rr_value >= reward_level:
-                    running_total += reward_level
-                else:
-                    running_total -= 1
+                # Go through all trades from this starting position
+                for i in range(start_idx, len(trades)):
+                    rr_value = trades.iloc[i]["rr_numeric"]
+                    
+                    if rr_value >= reward_level:
+                        running_total += reward_level
+                    else:
+                        running_total -= 1
+                    
+                    # Track the lowest point
+                    if running_total < lowest_in_this_run:
+                        lowest_in_this_run = running_total
                 
-                # Track the lowest point
-                if running_total < lowest_in_this_run:
-                    lowest_in_this_run = running_total
+                # Update absolute lowest if this run was lower
+                if lowest_in_this_run < lowest_overall:
+                    lowest_overall = lowest_in_this_run
+                    best_starting_position = start_idx
+                
+                # Log progress periodically
+                if idx % report_interval == 0 or idx == total_positions:
+                    progress_pct = (idx / total_positions) * 100
+                    print(f"   ⏳ Progress: {idx}/{total_positions} positions tested ({progress_pct:.1f}%) - Current lowest: {lowest_overall}")
             
-            # Update absolute lowest if this run was lower
-            if lowest_in_this_run < absolute_lowest:
-                absolute_lowest = lowest_in_this_run
-                best_starting_position = start_idx
-            
-            # Log progress periodically
-            if idx % report_interval == 0 or idx == total_sl_positions:
-                progress_pct = (idx / total_sl_positions) * 100
-                print(f"   ⏳ Progress: {idx}/{total_sl_positions} SL positions tested ({progress_pct:.1f}%) - Current lowest: {absolute_lowest}")
+            print(f"   ✅ Phase 2 complete")
+        else:
+            print(f"   ℹ️  No zero-crossing positions found - using initial pass result")
         
-        print(f"   ✅ Absolute Lowest: {absolute_lowest}")
-        print(f"   📌 Best Starting Position: Index {best_starting_position}")
+        print(f"   🎯 ABSOLUTE LOWEST: {lowest_overall}")
+        print(f"   📍 Worst Starting Position: Index {best_starting_position}")
         
         results.append({
             "Reward_Level": reward_level,
-            "Absolute_Lowest": absolute_lowest,
-            "Starting_Position": best_starting_position
+            "Absolute_Lowest": lowest_overall,
+            "Starting_Position": best_starting_position,
+            "Zero_Crossings": len(zero_crossing_positions)
         })
     
     # Convert to DataFrame
@@ -151,13 +182,6 @@ def create_detailed_report(input_csv="trades.csv", output_txt="drawdown_report.t
     
     trades["rr_numeric"] = trades["reward_risk"].apply(convert_to_numeric)
     
-    # Find SL positions
-    sl_positions = trades[trades["reward_risk"] == "SL"].index.tolist()
-    
-    if len(sl_positions) == 0:
-        print("❌ No SL trades found!")
-        return
-    
     # Determine reward levels
     max_reward = int(trades["rr_numeric"].max())
     reward_levels = list(range(1, max_reward + 1))
@@ -169,8 +193,13 @@ def create_detailed_report(input_csv="trades.csv", output_txt="drawdown_report.t
     report_lines.append("=" * 70)
     report_lines.append("")
     report_lines.append(f"Total Trades: {len(trades)}")
-    report_lines.append(f"Total SL Positions: {len(sl_positions)}")
     report_lines.append(f"Reward Levels Tested: {reward_levels}")
+    report_lines.append("")
+    report_lines.append("Algorithm:")
+    report_lines.append("  1. Initial pass through entire list (index 0 to end)")
+    report_lines.append("  2. Mark positions where balance reaches exactly 0")
+    report_lines.append("  3. Test from each zero-crossing position")
+    report_lines.append("  4. Return absolute lowest across all passes")
     report_lines.append("")
     report_lines.append("=" * 70)
     report_lines.append("  RESULTS BY REWARD LEVEL")
@@ -181,41 +210,60 @@ def create_detailed_report(input_csv="trades.csv", output_txt="drawdown_report.t
     for reward_idx, reward_level in enumerate(reward_levels, 1):
         print(f"   📍 Processing Reward Level {reward_level} ({reward_idx}/{len(reward_levels)})...")
         
-        absolute_lowest = float('inf')
-        best_starting_position = None
+        # Phase 1: Initial pass
+        running_total = 0
+        lowest_overall = 0
+        zero_crossing_positions = []
         
-        total_sl_positions = len(sl_positions)
-        report_interval = min(max(total_sl_positions // 10, 1), 100)
+        for i in range(len(trades)):
+            rr_value = trades.iloc[i]["rr_numeric"]
+            
+            if rr_value >= reward_level:
+                running_total += reward_level
+            else:
+                running_total -= 1
+            
+            if running_total < lowest_overall:
+                lowest_overall = running_total
+            
+            if running_total == 0:
+                zero_crossing_positions.append(i)
         
-        for idx, start_idx in enumerate(sl_positions, 1):
-            running_total = 0
-            lowest_in_this_run = 0
+        best_starting_position = 0
+        
+        # Phase 2: Test from zero crossings
+        if len(zero_crossing_positions) > 0:
+            total_positions = len(zero_crossing_positions)
+            report_interval = min(max(total_positions // 10, 1), 100)
             
-            for i in range(start_idx, len(trades)):
-                rr_value = trades.iloc[i]["rr_numeric"]
+            for idx, start_idx in enumerate(zero_crossing_positions, 1):
+                running_total = 0
+                lowest_in_this_run = 0
                 
-                if rr_value >= reward_level:
-                    running_total += reward_level
-                else:
-                    running_total -= 1
+                for i in range(start_idx, len(trades)):
+                    rr_value = trades.iloc[i]["rr_numeric"]
+                    
+                    if rr_value >= reward_level:
+                        running_total += reward_level
+                    else:
+                        running_total -= 1
+                    
+                    if running_total < lowest_in_this_run:
+                        lowest_in_this_run = running_total
                 
-                if running_total < lowest_in_this_run:
-                    lowest_in_this_run = running_total
-            
-            if lowest_in_this_run < absolute_lowest:
-                absolute_lowest = lowest_in_this_run
-                best_starting_position = start_idx
-            
-            # Log progress for report generation
-            if idx % report_interval == 0:
-                progress_pct = (idx / total_sl_positions) * 100
-                print(f"      Progress: {progress_pct:.0f}% complete...")
+                if lowest_in_this_run < lowest_overall:
+                    lowest_overall = lowest_in_this_run
+                    best_starting_position = start_idx
+                
+                if idx % report_interval == 0:
+                    progress_pct = (idx / total_positions) * 100
+                    print(f"      Progress: {progress_pct:.0f}% complete...")
         
         report_lines.append(f"Reward Level {reward_level}:")
         report_lines.append(f"  Rule: R/R ≥ {reward_level} = +{reward_level}, R/R < {reward_level} = -1")
-        report_lines.append(f"  Absolute Lowest Drawdown: {absolute_lowest}")
-        report_lines.append(f"  Best Starting Position: Index {best_starting_position}")
-        report_lines.append(f"  Total SL Positions Tested: {len(sl_positions)}")
+        report_lines.append(f"  Absolute Lowest Drawdown: {lowest_overall}")
+        report_lines.append(f"  Worst Starting Position: Index {best_starting_position}")
+        report_lines.append(f"  Zero-Crossing Positions Found: {len(zero_crossing_positions)}")
         report_lines.append("")
     
     report_lines.append("=" * 70)
@@ -224,7 +272,10 @@ def create_detailed_report(input_csv="trades.csv", output_txt="drawdown_report.t
     report_lines.append("")
     report_lines.append("The 'Absolute Lowest' value represents the maximum drawdown")
     report_lines.append("(lowest cumulative value) you could experience when trading")
-    report_lines.append("at that reward level, starting from the worst possible position.")
+    report_lines.append("at that reward level.")
+    report_lines.append("")
+    report_lines.append("Zero-crossing positions are points where the cumulative balance")
+    report_lines.append("reaches exactly 0 during the initial pass through all trades.")
     report_lines.append("")
     report_lines.append("A lower (more negative) number means higher risk at that level.")
     report_lines.append("=" * 70)
@@ -242,7 +293,7 @@ def create_detailed_report(input_csv="trades.csv", output_txt="drawdown_report.t
 
 if __name__ == "__main__":
     print("\n" + "=" * 70)
-    print("  LOWEST DRAWDOWN CALCULATOR")
+    print("  LOWEST DRAWDOWN CALCULATOR - ZERO-CROSSING METHOD")
     print("=" * 70)
     print()
     
