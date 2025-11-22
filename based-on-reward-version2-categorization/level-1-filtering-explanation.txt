@@ -1,0 +1,45 @@
+from the folder categorized by distance result we start going through all list using the function categorize-by-distance.py with some differences.
+1- we don't filter the lists only by 1/1 reward we filter it by every reward available in the lists(rounded to their down real number) but for each reward/risk we do all lists one
+exp: for reward 1/2 we start counting each under 2 R/R as -1 and each number greater than 2 as +2
+do this for every reward
+so as expected we would have as many lists as we have risk/reward rounded numbers
+only return the lists that their overall reward counts are greater than 0 after the formula was applied on each one, so we expect the formula to remove some lists after the equations
+
+another equation to add to the formula is count how many trades we have in each list and reduce 1 for every 20 trades. for example if we have 400 trades we should reduce 20 from the overall results of the last equation
+
+
+2- then we filter the results(the list that was created) by the hour with the same approach for each list, first we filter each list by the weekdays and buy/sell like we did before.
+the result would be a folder of 10 list for each of the list extracted from the categorize-by-distance.
+then we start applying the formula of removing the lists by the R/R we had got the results from but for each folder we use the reward we .
+
+
+the input gonna be a folder containing a bunch of lists filtered by distance
+1-first we extract all the R/Rs available in the list(rounded down to their real number) so we do the function for each one
+
+do the rest of this function for each R/R from now on:
+
+2- then for each R/R we start applying this formula,we go through all the list and see that if each trade R/R is greater than the R/R we are working on or smaller. if smaller count it as -1 and if greater count it as bigger than +R/R(the number that we are iterate from)
+we also count how many trades are in that list and we count each 20 trades that we count as -1.
+exp: for R/R=1/2 we see if the trade is greater than 2 we count it as +2 and for each under 2 or SL we count it as -1.
+and if for exp we have 400 trades we should also reduce -20.
+
+also then we calculate for each list if the total gonna be greater than zero or smaller than 0. if in that list it's greater than 0 we return the list as succesful and if it's smaller we don't return the list.
+
+at the end we return all the remaining lists as 1 list.
+
+
+3- for the next operation first we filter and categorize the list by the hours like we did in categorize-by-hour.py
+then we start applying the last formula that we used in the before function as i will explain again now.
+we go through all the list and see that if each trade R/R is greater than the R/R we are working on or smaller. if smaller count it as -1 and if greater count it as bigger than +R/R(the number that we are iterate from)
+we also count how many trades are in that list and we count each 20 trades that we count as -1.
+
+then again we calculate for each list if the total gonna be greater than zero or smaller than 0. if in that list it's greater than 0 we return the list as succesful and if it's smaller we don't return the list.
+
+
+at the end we return all the remaining lists as 1 list.
+
+3- for this operation we filter and categorize the list by the days of the week like we did in categorize-by-weekdays.py.
+
+then again we apply the same formula we applied in the last two equations. 
+
+again at the end we return all the remaining lists as 1 list and also we organize the list by date and hour of the trade.
