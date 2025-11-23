@@ -1,6 +1,21 @@
 import pandas as pd
 import numpy as np
 import time
+import boto3
+
+# ===============================================================
+#  S3 CLIENT (LIARA BUCKET)
+# ===============================================================
+
+s3 = boto3.client(
+    "s3",
+    endpoint_url="https://storage.c2.liara.space",
+    aws_access_key_id="YOUR_ACCESS_KEY",     # 
+    aws_secret_access_key="YOUR_SECRET_KEY", # 
+)
+
+BUCKET_NAME = "janyar"
+
 
 # ===============================================================
 #  OPTIMIZED LOWEST DRAWDOWN - CLEAN LOG VERSION
@@ -69,9 +84,24 @@ def calculate_lowest_drawdown(input_csv="trades.csv", output_csv="lowest_drawdow
             "Calculation_Time_Seconds": round(reward_time, 2)
         })
 
-    # Convert to DataFrame and save
+    # Convert to DataFrame
     results_df = pd.DataFrame(results)
+
+    # ===============================================================
+    #  SAVE LOCALLY + UPLOAD TO LIARA BUCKET
+    # ===============================================================
+
+    # Save locally first
     results_df.to_csv(output_csv, index=False)
+
+    # Upload to bucket
+    s3.upload_file(
+        Filename=output_csv,
+        Bucket=BUCKET_NAME,
+        Key=output_csv  # file inside bucket
+    )
+
+    print(f"\n📤 Uploaded to bucket '{BUCKET_NAME}' as '{output_csv}'")
 
     total_time = time.time() - start_time
 
@@ -79,7 +109,8 @@ def calculate_lowest_drawdown(input_csv="trades.csv", output_csv="lowest_drawdow
     print("📊 FINAL RESULTS - LOWEST DRAWDOWN BY REWARD LEVEL")
     print("=" * 70)
     print(results_df.to_string(index=False))
-    print(f"\n💾 Results saved to: {output_csv}")
+    print(f"\n💾 Results saved locally as: {output_csv}")
+    print(f"📥 And uploaded to bucket: {output_csv}")
     print(f"⏱️ Total execution time: {total_time:.2f} seconds\n")
 
     return results_df
