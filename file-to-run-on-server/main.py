@@ -10,8 +10,8 @@ import boto3
 s3 = boto3.client(
     "s3",
     endpoint_url="https://storage.c2.liara.space",
-    aws_access_key_id="YOUR_ACCESS_KEY",     # 
-    aws_secret_access_key="YOUR_SECRET_KEY", # 
+    aws_access_key_id="",     # 
+    aws_secret_access_key="", # 
 )
 
 BUCKET_NAME = "janyar"

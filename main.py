@@ -1,234 +1,137 @@
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
+import time
+import boto3
 
 # ===============================================================
-#  STEP 1: LOAD AND PREPARE DATA
+#  S3 CLIENT (LIARA BUCKET)
 # ===============================================================
 
-# Load CSV file (no header, since your first row is actual data)
-data = pd.read_csv("gold_data.csv", header=None)
+s3 = boto3.client(
+    "s3",
+    endpoint_url="https://storage.c2.liara.space",
+    aws_access_key_id="",     # 
+    aws_secret_access_key="", # 
+)
 
-# data = data.head(1000)  # limit to first 500 rows for faster testing
+BUCKET_NAME = "janyar"
 
-# Assign standard column names
-data.columns = ["date", "time", "open", "high", "low", "close", "volume"]
-
-# Combine date + time into single datetime column
-data["datetime"] = pd.to_datetime(data["date"] + " " + data["time"])
-
-# Keep only the needed columns for trading
-data = data[["datetime", "open", "high", "low", "close"]]
-
-# Sort by datetime (in case data is out of order)
-data.sort_values("datetime", inplace=True)
-data.reset_index(drop=True, inplace=True)
-
-print(f"✅ Data loaded successfully — {len(data)} candles available.\n")
-print(data.head())
 
 # ===============================================================
-#  STEP 2: DEFINE THE BACKTESTING LOGIC
+#  OPTIMIZED LOWEST DRAWDOWN - CLEAN LOG VERSION
 # ===============================================================
 
-def backtest_candle_strategy(data, entry_offset=0.2, stop_offset=0.2):
+def calculate_lowest_drawdown(input_csv="trades.csv", output_csv="lowest_drawdown_results.csv"):
     """
-    Backtests a candle-based trading strategy on 4-hour candles.
-    Opens one trade at the close of each candle and tracks performance until stop-loss is hit.
-    If data ends before SL is hit, position is closed at end of data.
+    Optimized version using NumPy vectorization.
+    - Tests from every SL position.
+    - Prints only final results (no progress logs).
     """
-    trades = []
-    end_of_data_closes = 0
 
-    for i in range(len(data) - 1):
-        candle = data.iloc[i]
+    start_time = time.time()
 
-        open_price = candle["open"]
-        close_price = candle["close"]
-        high_price = candle["high"]
-        low_price = candle["low"]
-        datetime_obj = candle["datetime"]
-        
-        # Extract day of week (Monday, Tuesday, etc.)
-        day_of_week = datetime_obj.strftime("%A")
+    # Load the trades CSV
+    try:
+        trades = pd.read_csv(input_csv)
+    except FileNotFoundError:
+        print(f"❌ Error: {input_csv} not found!")
+        return
 
-        # Determine trade direction based on candle type
-        if close_price > open_price:  # Bullish candle → Buy
-            trade_type = "Buy"
-            entry = close_price + entry_offset
-            stop_loss = low_price - stop_offset
-        elif close_price < open_price:  # Bearish candle → Sell
-            trade_type = "Sell"
-            entry = close_price - entry_offset
-            stop_loss = high_price + stop_offset
-        else:
-            # Skip doji (no direction)
-            continue
+    # Convert reward_risk to handle both numeric and "SL"
+    trades["reward_risk"] = trades["reward_risk"].astype(str)
 
-        # Calculate distance (risk)
-        distance = abs(entry - stop_loss)
-        max_profit = 0
-        stop_hit = False
-        candles_held = 0
-        close_reason = "Stop Loss"
-        reached_end = False
+    def convert_to_numeric(rr):
+        return 0.0 if rr == "SL" else float(rr)
 
-        # Simulate forward candles to check when stop-loss is hit
-        for j in range(i + 1, len(data)):
-            future = data.iloc[j]
-            high_future = future["high"]
-            low_future = future["low"]
-            candles_held += 1
+    rr_values = trades["reward_risk"].apply(convert_to_numeric).values
+    n_trades = len(rr_values)
 
-            # Check if this is the last candle in the data
-            is_last_candle = (j == len(data) - 1)
+    # Find all SL positions
+    sl_positions = np.where(rr_values == 0)[0]
+    if len(sl_positions) == 0:
+        print("❌ No SL trades found in the list!")
+        return
 
-            if trade_type == "Buy":
-                # Track the highest profit before stop-loss is hit
-                current_profit = high_future - entry
-                max_profit = max(max_profit, current_profit)
-                
-                # Check if stop-loss is hit
-                if low_future <= stop_loss:
-                    stop_hit = True
-                    close_reason = "Stop Loss"
-                    break
-                
-                # If we reached the last candle without hitting SL
-                if is_last_candle:
-                    close_reason = "End of Data"
-                    reached_end = True
-                    end_of_data_closes += 1
-                    break
+    # Determine reward levels to test
+    max_reward = int(np.max(rr_values))
+    reward_levels = list(range(1, max_reward + 1))
 
-            elif trade_type == "Sell":
-                # Track the highest profit before stop-loss is hit
-                current_profit = entry - low_future
-                max_profit = max(max_profit, current_profit)
-                
-                # Check if stop-loss is hit
-                if high_future >= stop_loss:
-                    stop_hit = True
-                    close_reason = "Stop Loss"
-                    break
-                
-                # If we reached the last candle without hitting SL
-                if is_last_candle:
-                    close_reason = "End of Data"
-                    reached_end = True
-                    end_of_data_closes += 1
-                    break
+    results = []
 
-        # Calculate reward/risk ratio
-        if distance != 0:
-            reward_risk_value = max_profit / distance
-            # If reward/risk < 1, mark as "SL"
-            if reward_risk_value < 1:
-                reward_risk = "SL"
-            else:
-                reward_risk = round(reward_risk_value, 2)
-        else:
-            reward_risk = "SL"
+    # Test each reward level
+    for reward_level in reward_levels:
+        values = np.where(rr_values >= reward_level, reward_level, -1)
+        absolute_lowest = float('inf')
+        best_starting_position = None
 
-        # Record trade
-        trades.append({
-            "date": datetime_obj.strftime("%Y-%m-%d"),
-            "time": datetime_obj.strftime("%H:%M:%S"),
-            "day_of_week": day_of_week,
-            "type": trade_type,
-            "entry": round(entry, 2),
-            "stop_loss": round(stop_loss, 2),
-            "distance": round(distance, 2),
-            "max_profit": round(max_profit, 2),
-            "reward_risk": reward_risk,
-            "candles_held": candles_held,
-            "close_reason": close_reason
+        # Test starting from each SL position
+        for start_idx in sl_positions:
+            segment_values = values[start_idx:]
+            segment_cumsum = np.cumsum(segment_values)
+            lowest_in_this_run = np.min(np.minimum(segment_cumsum, 0))
+
+            if lowest_in_this_run < absolute_lowest:
+                absolute_lowest = lowest_in_this_run
+                best_starting_position = int(start_idx)
+
+        reward_time = time.time() - start_time
+        print(f"✅ Reward Level {reward_level}: Lowest={absolute_lowest}, StartIndex={best_starting_position}")
+
+        results.append({
+            "Reward_Level": reward_level,
+            "Absolute_Lowest": int(absolute_lowest),
+            "Starting_Position": best_starting_position,
+            "Calculation_Time_Seconds": round(reward_time, 2)
         })
 
-    return pd.DataFrame(trades), end_of_data_closes
+    # Convert to DataFrame
+    results_df = pd.DataFrame(results)
+
+    # ===============================================================
+    #  SAVE LOCALLY + UPLOAD TO LIARA BUCKET
+    # ===============================================================
+
+    # Save locally first
+    results_df.to_csv(output_csv, index=False)
+
+    # Upload to bucket
+    s3.upload_file(
+        Filename=output_csv,
+        Bucket=BUCKET_NAME,
+        Key=output_csv  # file inside bucket
+    )
+
+    print(f"\n📤 Uploaded to bucket '{BUCKET_NAME}' as '{output_csv}'")
+
+    total_time = time.time() - start_time
+
+    print("\n" + "=" * 70)
+    print("📊 FINAL RESULTS - LOWEST DRAWDOWN BY REWARD LEVEL")
+    print("=" * 70)
+    print(results_df.to_string(index=False))
+    print(f"\n💾 Results saved locally as: {output_csv}")
+    print(f"📥 And uploaded to bucket: {output_csv}")
+    print(f"⏱️ Total execution time: {total_time:.2f} seconds\n")
+
+    return results_df
+
 
 # ===============================================================
-#  STEP 3: RUN BACKTEST AND SAVE RESULTS
+#  MAIN EXECUTION
 # ===============================================================
 
-results, end_of_data_closes = backtest_candle_strategy(data)
-results.to_csv("trades.csv", index=False)
-print("💾 Results saved to trades.csv")
+if __name__ == "__main__":
+    print("\n" + "=" * 70)
+    print("  LOWEST DRAWDOWN CALCULATOR (CLEAN LOG VERSION)")
+    print("=" * 70)
+    print()
 
-# ===============================================================
-#  STEP 4: SUMMARY STATISTICS
-# ===============================================================
+    # Run main function
+    results = calculate_lowest_drawdown(
+        input_csv="trades.csv",
+        output_csv="lowest_drawdown_results.csv"
+    )
 
-total_trades = len(results)
-stop_loss_trades = len(results[results["close_reason"] == "Stop Loss"])
-end_of_data_trades = len(results[results["close_reason"] == "End of Data"])
-
-# Calculate average R/R only for numeric values (exclude "SL")
-numeric_rr = results[results["reward_risk"] != "SL"]["reward_risk"]
-avg_rr = numeric_rr.mean() if len(numeric_rr) > 0 else 0
-
-avg_profit = results["max_profit"].mean()
-avg_candles_held = results["candles_held"].mean()
-sl_count = len(results[results["reward_risk"] == "SL"])
-
-print("\n📊 --- BACKTEST SUMMARY ---")
-print(f"Total Trades: {total_trades}")
-print(f"Closed by Stop Loss: {stop_loss_trades}")
-print(f"Closed at End of Data: {end_of_data_trades}")
-print(f"Trades with R/R < 1: {sl_count}")
-print(f"Average Reward/Risk (excluding SL): {avg_rr:.2f}")
-print(f"Average Max Profit: {avg_profit:.2f} USD")
-print(f"Average Candles Held: {avg_candles_held:.1f} candles ({avg_candles_held * 4:.1f} hours)")
-
-if end_of_data_trades > 0:
-    print(f"\nℹ️  {end_of_data_trades} positions were closed because the last candle was reached.")
-    print("These positions never hit their stop loss during the available data.")
-
-# Analyze performance by day of week
-print("\n📅 --- PERFORMANCE BY DAY OF WEEK ---")
-day_stats = results.groupby("day_of_week").agg({
-    "reward_risk": lambda x: x[x != "SL"].mean() if len(x[x != "SL"]) > 0 else 0,
-    "max_profit": "mean",
-    "type": "count"
-}).round(2)
-day_stats.columns = ["Avg R/R", "Avg Profit", "Trade Count"]
-
-# Sort by day of week order
-day_order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-day_stats = day_stats.reindex([day for day in day_order if day in day_stats.index])
-print(day_stats)
-
-# Optional: visualize Reward/Risk distribution (numeric only)
-if len(numeric_rr) > 0:
-    plt.figure(figsize=(15, 5))
-    
-    # Subplot 1: R/R Distribution
-    plt.subplot(1, 3, 1)
-    plt.hist(numeric_rr, bins=30, color='gold', edgecolor='black')
-    plt.title("Reward/Risk Distribution (R/R ≥ 1)")
-    plt.xlabel("Reward/Risk Ratio")
-    plt.ylabel("Frequency")
-    
-    # Subplot 2: Holding Period Distribution
-    plt.subplot(1, 3, 2)
-    plt.hist(results["candles_held"], bins=30, color='skyblue', edgecolor='black')
-    plt.title("Holding Period Distribution")
-    plt.xlabel("Candles Held")
-    plt.ylabel("Frequency")
-    
-    # Subplot 3: Trades by Day of Week
-    plt.subplot(1, 3, 3)
-    day_counts = results["day_of_week"].value_counts().reindex(day_order, fill_value=0)
-    plt.bar(range(len(day_counts)), day_counts.values, color='lightgreen', edgecolor='black')
-    plt.xticks(range(len(day_counts)), [day[:3] for day in day_counts.index], rotation=45)
-    plt.title("Trades by Day of Week")
-    plt.xlabel("Day")
-    plt.ylabel("Number of Trades")
-    
-    plt.tight_layout()
-    plt.savefig('reward_risk_distribution.png')
-    print("📊 Chart saved to: reward_risk_distribution.png")
-
-# Optional: Show close reason breakdown
-print("\n📋 --- CLOSE REASON BREAKDOWN ---")
-print(results["close_reason"].value_counts())
+    print("=" * 70)
+    print("  COMPLETE!")
+    print("=" * 70)
