@@ -1,0 +1,14 @@
+now for the next step, we have diffrent folders based on the RRs, we want to extract two numbers from each list.
+
+the first number is gonna be based in the RR that the list was created based on. we go throug all the trades in the list and count every RR greater than the targeted RR as +RR and every RR lower than the target RR as -1.
+
+the second number gonna go through the list and find the count of the longest streak in the list that RRs are smaller than the target RR. for example 11 trades were smaller than the targeted RR.
+
+name the numbers yourself.
+then we gonna put the numbers in a formula and extract a 3rd number.
+we want all three numbers.
+ 
+ the formula
+ 10/first number * (second number - number of trades in that list / 10)
+
+ 
