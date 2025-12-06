@@ -6,7 +6,7 @@ import re
 #  METRIC CALCULATION FUNCTIONS
 # ===============================================================
 
-def calculate_net_score(trades_df, rr_threshold):
+def calculate_net_score(trades_df, rr_threshold, total_trades):
     """
     Calculate the net score for a list of trades.
     
@@ -16,19 +16,22 @@ def calculate_net_score(trades_df, rr_threshold):
     - If reward_risk > rr_threshold: Add +rr_threshold to score
     - If reward_risk <= rr_threshold: Subtract -1 from score
     - If reward_risk == "SL" (Stop Loss): Subtract -1 from score
+    - Final adjustment: Subtract (total_trades / 10) from the score
     
     Args:
         trades_df (DataFrame): DataFrame containing trade data with 'reward_risk' column
         rr_threshold (int): The target reward/risk ratio we're evaluating against
+        total_trades (int): Total number of trades (used for penalty calculation)
     
     Returns:
-        int: The net score (can be positive, negative, or zero)
+        float: The net score after applying trade count penalty
     
     Example:
-        If rr_threshold = 2:
+        If rr_threshold = 2 and total_trades = 200:
         - Trade with R/R = 3.5 → adds +2 (the threshold value)
         - Trade with R/R = 1.8 → adds -1 (below threshold)
         - Trade with R/R = "SL" → adds -1 (stop loss hit)
+        - Final score = raw_score - (200 / 10) = raw_score - 20
     """
     score = 0
     
@@ -50,7 +53,11 @@ def calculate_net_score(trades_df, rr_threshold):
                 # Loser: penalize by 1
                 score -= 1
     
-    return score
+    # Apply trade count penalty: subtract (total_trades / 10)
+    # This penalizes strategies with too many trades relative to their performance
+    adjusted_score = score - (total_trades / 10)
+    
+    return adjusted_score
 
 
 def calculate_max_losing_streak(trades_df, rr_threshold):
@@ -108,45 +115,42 @@ def calculate_quality_metric(net_score, max_losing_streak, total_trades):
     """
     Calculate the quality metric using a custom formula.
     
-    Formula: (10 / net_score) * (max_losing_streak - total_trades / 10)
+    Formula: (10 / max_losing_streak) * net_score
+    
+    Note: net_score is already adjusted for trade count (total_trades / 10 is subtracted in calculate_net_score)
     
     This metric combines:
-    1. Net profitability (via net_score)
-    2. Risk assessment (via max_losing_streak)
-    3. Trade frequency normalization (via total_trades / 10)
+    1. Risk assessment (via max_losing_streak) - inverted so lower streaks are better
+    2. Net profitability (via net_score, already adjusted for trade frequency)
     
     Interpretation:
-    - LOWER values are BETTER (less negative or closer to zero)
-    - Negative values indicate the streak risk relative to performance
-    - Cannot be calculated if net_score <= 0 (division by zero/negative)
+    - HIGHER values are BETTER (more positive)
+    - Positive values indicate good performance relative to risk
+    - Cannot be calculated if max_losing_streak <= 0 (division by zero/negative)
     
     Args:
-        net_score (int): The calculated net score from calculate_net_score()
+        net_score (float): The calculated net score from calculate_net_score() (already adjusted)
         max_losing_streak (int): The longest losing streak from calculate_max_losing_streak()
-        total_trades (int): Total number of trades in the dataset
+        total_trades (int): Total number of trades in the dataset (not used in formula, already in net_score)
     
     Returns:
-        float or None: The quality metric value, or None if net_score <= 0
+        float or None: The quality metric value, or None if max_losing_streak <= 0
     
     Example:
-        net_score = 100
+        net_score = 80 (already adjusted: 100 - 200/10)
         max_losing_streak = 5
-        total_trades = 200
         
-        quality_metric = (10 / 100) * (5 - 200/10)
-                       = 0.1 * (5 - 20)
-                       = 0.1 * (-15)
-                       = -1.5
+        quality_metric = (10 / 5) * 80
+                       = 2.0 * 80
+                       = 160.0
     """
     # Edge case: cannot divide by zero or negative numbers
-    if net_score <= 0:
+    if max_losing_streak <= 0:
         return None  # Return None to indicate this metric cannot be calculated
     
-    # Apply the formula with proper order of operations
-    # Step 1: Calculate 10 / net_score (performance factor)
-    # Step 2: Calculate (max_losing_streak - total_trades / 10) (risk adjustment)
-    # Step 3: Multiply them together
-    quality_metric = (10 / net_score) * (max_losing_streak - total_trades / 10)
+    # Apply the formula
+    # Since net_score is already adjusted for (total_trades / 10), we just multiply
+    quality_metric = (10 / max_losing_streak) * net_score
     
     return quality_metric
 
@@ -282,9 +286,10 @@ def process_filtered_results(input_base_folder="level_1_filtered_results",
         # Step 5: Calculate all three metrics
         total_trades = len(trades_df)
         
-        # Metric 1: Net Score
+        # Metric 1: Net Score (adjusted for trade count)
         # Measures overall profitability vs the R/R threshold
-        net_score = calculate_net_score(trades_df, rr_threshold)
+        # Already includes the (total_trades / 10) penalty
+        net_score = calculate_net_score(trades_df, rr_threshold, total_trades)
         
         # Metric 2: Max Losing Streak
         # Identifies the worst consecutive losing period
@@ -292,6 +297,7 @@ def process_filtered_results(input_base_folder="level_1_filtered_results",
         
         # Metric 3: Quality Metric
         # Combines profitability and risk into a single number
+        # net_score is already adjusted, so we don't pass total_trades again
         quality_metric = calculate_quality_metric(net_score, max_losing_streak, total_trades)
         
         # Step 6: Store the results for this R/R threshold
@@ -311,7 +317,7 @@ def process_filtered_results(input_base_folder="level_1_filtered_results",
         if quality_metric is not None:
             print(f"   ✅ Quality Metric: {quality_metric:.4f}")
         else:
-            print(f"   ⚠️  Quality Metric: Cannot calculate (net_score <= 0)")
+            print(f"   ⚠️  Quality Metric: Cannot calculate (max_losing_streak <= 0)")
         print()
     
     # Step 8: Create and save summary report
@@ -340,15 +346,15 @@ def process_filtered_results(input_base_folder="level_1_filtered_results",
         if not valid_metrics.empty:
             print(f"\n📊 Statistics:")
             
-            # Find the best (minimum) quality metric
-            # Remember: lower/more negative is better for this metric
-            best_idx = valid_metrics['quality_metric'].idxmin()
+            # Find the best (maximum) quality metric
+            # Remember: higher/more positive is better for this metric
+            best_idx = valid_metrics['quality_metric'].idxmax()
             best_metric = valid_metrics.loc[best_idx, 'quality_metric']
             best_rr = valid_metrics.loc[best_idx, 'rr_threshold']
             print(f"   Best Quality Metric: {best_metric:.4f} (R/R = {best_rr})")
             
-            # Find the worst (maximum) quality metric
-            worst_idx = valid_metrics['quality_metric'].idxmax()
+            # Find the worst (minimum) quality metric
+            worst_idx = valid_metrics['quality_metric'].idxmin()
             worst_metric = valid_metrics.loc[worst_idx, 'quality_metric']
             worst_rr = valid_metrics.loc[worst_idx, 'rr_threshold']
             print(f"   Worst Quality Metric: {worst_metric:.4f} (R/R = {worst_rr})")
