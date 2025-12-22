@@ -8,7 +8,7 @@ from datetime import datetime
 
 CONFIG = {
     "INITIAL_CAPITAL": 5000,
-    "POSITION_SIZE_PERCENT": 0.029,  # 2.9% of available capital
+    "POSITION_SIZE_PERCENT": 0.029,  # 2.9% of current capital
     "ENTRY_OFFSET": 0.2,  # USD offset for entry
     "SL_OFFSET": 0.2,  # USD offset for stop loss
     "DATA_FILE": "gold_data.csv",
@@ -16,44 +16,43 @@ CONFIG = {
     "EXCLUDED_TIME": "01:30",  # 1:30am excluded time
 }
 
-# Distance filters (rounded down)
+# Distance filters (rounded down) - DON'T OPEN THESE TRADES
 DISTANCE_FILTERS = {
     "buy": [
         3,
-        (6, 10),  # 6 till 10 (inclusive)
+        (6, 10),   # 6 till 10 buy (inclusive)
         12,
         14,
-        (16, 17),
+        (16, 17),  # 16 and 17 buy
         19,
         23,
         26,
         28,
         31,
-        (36, 37),
-        (42, 45),
-        (47, 48),
-        (52, 56),
-        (58, 71),
-        59,
+        (36, 37),  # 36 and 37 buy
+        (42, 45),  # 42 till 45 buy
+        (47, 48),  # 47 till 48 buy
+        (52, 56),  # 52 till 56 buy
+        (58, 71),  # 58 till 71 buy (note: 59 is within this range)
     ],
     "sell": [
         2,
-        (4, 11),
-        (13, 19),
-        (21, 22),
-        (24, 25),
+        (4, 11),   # 4 till 11 sell
+        (13, 19),  # 13 till 19 sell
+        (21, 22),  # 21 and 22 sell
+        (24, 25),  # 24 and 25 sell
         29,
-        (31, 34),
-        (36, 38),
+        (31, 34),  # 31 till 34 sell
+        (36, 38),  # 36 till 38 sell
         40,
         42,
         47,
-        (49, 56),
+        (49, 56),  # 49 till 56 sell
         58,
-        (62, 64),
-        (67, 72),
+        (62, 64),  # 62 till 64 sell
+        (67, 72),  # 67 till 72 sell
         74,
-        (77, 94),
+        (77, 94),  # 77 till 94 sell
     ],
 }
 
@@ -252,30 +251,8 @@ def run_backtest():
             total_trades_filtered += 1
             continue
 
-        # -------------------------------------------------------------
-        #  CALCULATE AVAILABLE MONEY & POSITION SIZE
-        # -------------------------------------------------------------
-        
-        # Calculate how much money is currently tied up in open trades
-        current_used_capital = sum(t["entry"] * t["position_size"] for t in open_positions)
-        
-        # Determine available money (Free Margin)
-        available_capital = capital - current_used_capital
-        
-        # If we have no money left or negative, we cannot open a trade
-        if available_capital <= 0:
-            continue
-
-        # Calculate position size based on 2.9% of AVAILABLE capital
-        position_size = (available_capital * CONFIG["POSITION_SIZE_PERCENT"]) / entry
-        
-        # Calculate exactly how much money is being used for this trade
-        money_used = position_size * entry
-
-        # -------------------------------------------------------------
-        #  END CALCULATION SECTION
-        # -------------------------------------------------------------
-        
+        # Calculate position size based on current capital
+        position_size = (capital * CONFIG["POSITION_SIZE_PERCENT"]) / entry
         take_profit = calculate_take_profit(entry, distance, trade_type)
 
         # Create new trade
@@ -287,7 +264,6 @@ def run_backtest():
             "take_profit": take_profit,
             "distance": distance,
             "position_size": position_size,
-            "money_used": money_used,
             "open_date": f"{candle['date']} {candle['time']}",
             "status": "open",
             "profit": 0,
@@ -338,12 +314,9 @@ def run_backtest():
             "entry": round(trade["entry"], 2),
             "stop_loss": round(trade["stop_loss"], 2),
             "distance": round(trade["distance"], 2),
-            # "trade_size" REMOVED as requested
-            "money_used": round(trade["money_used"], 2),
             "max_profit": round(max_profit, 2),
             "reward_risk": reward_risk
         })
-
 
     trades_df = pd.DataFrame(csv_data)
     trades_df.to_csv(CONFIG["OUTPUT_FILE"], index=False)
