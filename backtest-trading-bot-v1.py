@@ -12,7 +12,7 @@ CONFIG = {
     "ENTRY_OFFSET": 0.2,  # USD offset for entry
     "SL_OFFSET": 0.2,  # USD offset for stop loss
     "DATA_FILE": "gold_data.csv",
-    "OUTPUT_FILE": "trades2.csv",
+    "OUTPUT_FILE": "trades3.csv",
     "EXCLUDED_TIME": "01:30",  # 1:30am excluded time
 }
 
@@ -62,23 +62,20 @@ DISTANCE_FILTERS = {
 # ===============================================================
 
 def is_distance_filtered(distance, trade_type):
-    """
-    Check if a distance value is in the filter list
-    """
-    rounded_distance = int(np.floor(distance))
-    filters = DISTANCE_FILTERS[trade_type.lower()]
+    # Use round() instead of floor to better match visual expectations
+    # and convert to int for comparison
+    rounded_distance = int(round(distance)) 
+    
+    filters = DISTANCE_FILTERS.get(trade_type.lower(), [])
 
     for f in filters:
         if isinstance(f, tuple):
-            # Range check
             min_val, max_val = f
             if min_val <= rounded_distance <= max_val:
                 return True
         else:
-            # Single value check
             if rounded_distance == f:
                 return True
-
     return False
 
 
@@ -225,7 +222,12 @@ def run_backtest():
 
     # Process each candle
     for idx, candle in candles_df.iterrows():
-        # Update all open positions
+        # ✅ FIX: Update yearly capital tracking FIRST
+        # This ensures every year is captured, even if no trades occur.
+        year = str(candle["date"]).split('.')[0]
+        yearly_capital[year] = capital
+
+        # 1. Update all open positions
         for trade in open_positions:
             check_trade_status(trade, candle)
             
@@ -233,20 +235,20 @@ def run_backtest():
             if trade["status"] == "closed":
                 capital += trade["profit"]
 
-        # Remove closed positions
+        # 2. Remove closed positions
         open_positions = [t for t in open_positions if t["status"] == "open"]
 
-        # Check if we should skip this candle for opening new trades
+        # 3. Check if we should skip this candle for opening new trades
         if candle["time"] == CONFIG["EXCLUDED_TIME"]:
             continue
 
-        # Determine trade parameters
+        # 4. Determine trade parameters
         trade_type = get_trade_type(candle)
         entry = calculate_entry(candle, trade_type)
         stop_loss = calculate_stop_loss(candle, trade_type)
         distance = calculate_distance(entry, stop_loss)
 
-        # Check distance filter
+        # 5. Check distance filter
         if is_distance_filtered(distance, trade_type):
             total_trades_filtered += 1
             continue
