@@ -1,0 +1,9 @@
+categorizing before the backtest bot to decide which distances to remove bug
+
+25/2/2009 must have been three returned results but only 1 returned
+
+2009.02.26, 2009.02.27 didn't exist in the list
+
+2009.03.05 only 1 in categorized list but 3 in backtest result
+
+compare and see why there were available in the backtest but not in categorized list
