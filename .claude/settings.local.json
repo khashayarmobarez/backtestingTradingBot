@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find \"C:\\\\Users\\\\Khashayar\\\\Desktop\\\\customers projects\\\\janyar trading bot\\\\backtestingTradingBot\\(first bot\\)\" -name \"final_result*.csv\" -type f)",
+      "Bash(ls \"C:\\\\Users\\\\Khashayar\\\\Desktop\\\\customers projects\\\\janyar trading bot\\\\backtestingTradingBot\\(first bot\\)\\\\categorized_by_distance_results\")",
+      "Bash(python debug_filtering.py)",
+      "Bash(python3 debug_filtering.py)"
+    ]
+  }
+}
