@@ -1,0 +1,11 @@
+ Why Specific Dates Are Missing:
+
+  2009-02-25: Should have 3 Buy trades (lines 4, 5, 7) but only 1 returned (line 6 - Sell with distance=28)
+  - The 3 Buy trades are in buy_distance_8.csv but get filtered out at the hour level because each hour has too few trades
+
+  2009-02-26, 2009-02-27: Completely missing
+  - All trades from these dates are in distance files but get filtered out at hour or weekday level
+
+  2009-03-05: Should have 3 trades but only 1 returned
+  - Lines 38-39: Buy trades with distance=2.77 and 1.65 (in buy_distance_2.csv and buy_distance_1.csv)
+  - These small distance groups likely fail the distance filter due to low scores
