@@ -9,7 +9,11 @@
       "Bash(ls -1 *.py)",
       "Bash(ls -1 *.csv)",
       "Bash(find . -maxdepth 1 -type d ! -name \".\" ! -name \".git\" ! -name \".claude\" ! -name \"venv\" -exec du -sh {} ;)",
-      "Bash(ls -lh *.csv)"
+      "Bash(ls -lh *.csv)",
+      "Bash(python \"C:\\\\Users\\\\Khashayar\\\\Desktop\\\\customers projects\\\\janyar trading bot\\\\backtestingTradingBot\\(first bot\\)\\\\backtest-trading-bot-v1.py\")",
+      "Bash(pip install pandas numpy)",
+      "Bash(chcp 6500)",
+      "Bash(PYTHONIOENCODING=utf-8 python \"C:\\\\Users\\\\Khashayar\\\\Desktop\\\\customers projects\\\\janyar trading bot\\\\backtestingTradingBot\\(first bot\\)\\\\backtest-trading-bot-v1.py\")"
     ]
   }
 }

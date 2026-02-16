@@ -137,7 +137,7 @@ def check_trade_status(trade, candle):
             trade["exit_price"] = trade["stop_loss"]
             trade["exit_date"] = f"{candle['date']} {candle['time']}"
             trade["profit"] = -trade["distance"] * trade["position_size"]
-            trade["reward_risk"] = 0  # Hit SL = 0 R/R
+            trade["reward_risk"] = "SL"  # Hit SL
             return
         # Check take profit
         if candle["high"] >= trade["take_profit"]:
@@ -155,7 +155,7 @@ def check_trade_status(trade, candle):
             trade["exit_price"] = trade["stop_loss"]
             trade["exit_date"] = f"{candle['date']} {candle['time']}"
             trade["profit"] = -trade["distance"] * trade["position_size"]
-            trade["reward_risk"] = 0
+            trade["reward_risk"] = "SL"  # Hit SL
             return
         # Check take profit
         if candle["low"] <= trade["take_profit"]:
@@ -222,21 +222,20 @@ def run_backtest():
 
     # Process each candle
     for idx, candle in candles_df.iterrows():
-        # ✅ FIX: Update yearly capital tracking FIRST
-        # This ensures every year is captured, even if no trades occur.
-        year = str(candle["date"]).split('.')[0]
-        yearly_capital[year] = capital
-
         # 1. Update all open positions
         for trade in open_positions:
             check_trade_status(trade, candle)
-            
+
             # If closed, update capital
             if trade["status"] == "closed":
                 capital += trade["profit"]
 
         # 2. Remove closed positions
         open_positions = [t for t in open_positions if t["status"] == "open"]
+
+        # Track yearly capital after updating positions
+        year = str(candle["date"]).split('.')[0]
+        yearly_capital[year] = capital
 
         # 3. Check if we should skip this candle for opening new trades
         if candle["time"] == CONFIG["EXCLUDED_TIME"]:
@@ -252,6 +251,10 @@ def run_backtest():
         if is_distance_filtered(distance, trade_type):
             total_trades_filtered += 1
             continue
+
+        # 6. Check if capital is sufficient
+        if capital <= 0:
+            continue  # Skip opening new trades if capital is depleted
 
         # Calculate position size based on current capital
         position_size = (capital * CONFIG["POSITION_SIZE_PERCENT"]) / entry
@@ -278,19 +281,15 @@ def run_backtest():
         all_trades.append(trade)
         total_trades_opened += 1
 
-        # Track yearly capital
-        year = candle["date"].split('.')[0]
-        yearly_capital[year] = capital
-
     # Calculate final capital including unrealized P&L
     last_candle = candles_df.iloc[-1]
     unrealized_pnl = sum(calculate_unrealized_pnl(t, last_candle["close"]) for t in open_positions)
     final_capital = capital + unrealized_pnl
 
-    # Mark remaining open positions with "SL" for reward_risk
+    # Mark remaining open positions with "OPEN" for reward_risk
     for trade in all_trades:
         if trade["status"] == "open":
-            trade["reward_risk"] = "SL"  # Still open at end = treat as SL for CSV
+            trade["reward_risk"] = "OPEN"  # Still open at end
             trade["exit_price"] = last_candle["close"]
             trade["exit_date"] = f"{last_candle['date']} {last_candle['time']}"
             trade["profit"] = calculate_unrealized_pnl(trade, last_candle["close"])
@@ -306,7 +305,7 @@ def run_backtest():
         date, time = trade["open_date"].split(' ')
         day_of_week = get_day_of_week(date)
         max_profit = trade["profit"]
-        reward_risk = "SL" if trade["reward_risk"] is None else trade["reward_risk"]
+        reward_risk = trade["reward_risk"] if trade["reward_risk"] is not None else "OPEN"
         
         csv_data.append({
             "date": date,
@@ -345,7 +344,7 @@ def run_backtest():
     print()
 
     # Calculate win rate
-    closed_trades = [t for t in all_trades if t["reward_risk"] != "SL" and t["reward_risk"] is not None]
+    closed_trades = [t for t in all_trades if t["reward_risk"] not in ["SL", "OPEN", None]]
     winning_trades = [t for t in closed_trades if t["reward_risk"] > 0]
     win_rate = (len(winning_trades) / len(closed_trades) * 100) if closed_trades else 0
     
